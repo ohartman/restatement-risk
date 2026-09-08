@@ -8,6 +8,30 @@ strict out-of-time test, and compares it against the standard published
 baseline (the Dechow et al. 2011 F-score). Everything runs on one laptop with a
 6 GB GPU. Nothing was paid for.
 
+## Questions a reviewer will ask first
+
+- **Is the split temporal?** Yes. Train on 10-Ks filed before 2019, test on
+  the 17,755 filed 2019–2023. Every selection decision used the 2017 and
+  2018 validation years; the test set was scored once per reported row.
+- **What exactly is the label?** An SEC Form 8-K Item 4.02 (non-reliance on
+  previously issued financial statements) filed within three years of the
+  10-K. Base rate 5.2%. Most are errors, not fraud.
+- **How are gains judged?** A paired bootstrap on the same test filings; a
+  block is claimed only if its interval excludes zero. Firm-clustered
+  intervals are reported for the headline.
+- **Could the model see the future?** Five ways it did were found and
+  removed, each with its cost measured: an amendment flag, a text-parser
+  fingerprint, 10-K text matched a year late, a price feed that knew about
+  later delistings and splits, and comment letters dated before they were
+  public. See "What did not go wrong, because we checked".
+- **What would a forecaster on 1 January 2019 have scored?** 0.724, not
+  0.748: training labels carry hindsight. See "What a forecaster would have
+  known".
+- **Is it memorising firms?** On filings from companies never seen restating
+  it scores 0.740.
+- **What did not work?** About sixty things, each with its number, in "What
+  was tried, and what moved".
+
 ## Result
 
 **From the financial statements alone: AUC 0.737 on 17,755 held-out 10-Ks filed
