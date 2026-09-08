@@ -1,0 +1,14 @@
+# data: 38 GB of SEC filings, extractions and feature caches; see README "Reproduce"
+data/
+# third-party: EDGAR-CRAWLER (GPL-3), cloned into tools/ by hand; see README
+tools/
+__pycache__/
+*.pyc
+*.npz
+*.jsonl
+*.log
+.venv/
+# session-specific job chains (hard-coded temp paths); the README has the real commands
+run_*.sh
+fix_rows*.sh
+_readme_*.py
