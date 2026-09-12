@@ -503,44 +503,106 @@ scenarios, and a regression on the Fama-French five factors plus momentum
 
 | decile of restatement score, stocks above $10 at entry | later restated | 12-month return vs SPY, mean | median | lost more than half |
 |---|---|---|---|---|
-| 1 | 0.3% | −1.1% | −1.9% | 3% |
-| 5 | 1.2% | −4.4% | −8.4% | 11% |
-| 9 | 8.9% | −18.1% | −35.2% | 38% |
-| **10** | 14.8% | **−28.5%** | **−62.0%** | **59%** |
+| 1 | 0.4% | −1.0% | −1.9% | 3% |
+| 5 | 0.8% | −4.8% | −8.3% | 11% |
+| 9 | 8.6% | −11.7% | −25.8% | 30% |
+| **10** | 13.5% | **−25.5%** | **−50.0%** | **50%** |
 
-Decile 10 minus the rest: −22.6% [−31.8%, −12.7%], monotone across the
+Decile 10 minus the rest: −20.9% [−29.6%, −11.4%], monotone across the
 deciles. Below $5 the raw mean flips positive — a few penny stocks rose
 fifty-fold in 2020 — which is the standard reason shorting microcaps blows up.
 
-| monthly long-short, April 2019 – June 2024 | $10 floor | $5 floor |
+One data-quality rule sits under every number in this section, and it was
+learned the hard way. Yahoo's history for 240 of the panel's 2,982 tickers is
+broken — recycled symbols spliced onto another company's prices, split
+factors applied to the wrong side — giving month-end closes of $681 million
+and monthly "returns" of +100,000%. Those tickers are dropped whole
+(`signals/panel.py`: any month above +1,000% or a close outside $0.01 to
+$100,000 condemns the series). A first attempt dropped every month above
++300% instead, real or not, and that silently doubled the short strategy's
+return, because the large months are its losses; it was caught and reversed.
+Genuine large moves are kept.
+
+| monthly long-short, April 2019 – June 2024, $10 floor | screened panel | unscreened, for the record |
 |---|---|---|
-| gross | +27.6%/yr, Sharpe 0.64, worst month −49% | +13.8%/yr, Sharpe 0.29, worst month −69% |
-| net of 0.25% one-way costs and a 2% / 10% / 30% borrow fee | +24.4% / +16.4% / −3.6% | +10.7% / +2.7% / −17.3% |
-| six-factor alpha (Newey-West) | +9.4%/yr, t = 0.5 | −5.5%/yr, t = −0.3 |
-| factor loadings with t > 2 | SMB −1.5, HML +1.1, RMW +1.9, CMA −1.3 | HML +1.2, RMW +2.0, CMA −1.6 |
+| gross | +24.6%/yr, Sharpe 0.95, worst month −27% | +27.6%/yr, Sharpe 0.64, worst month −49% |
+| net of 0.25% one-way costs and a 10% borrow fee | +13.4%/yr | +16.4%/yr |
+| six-factor alpha (Newey-West) | +16.7%/yr, t = 1.75 | +9.4%/yr, t = 0.5 |
 
 The long-only use needs no borrow desk: hold the equal-weighted universe and
 drop the riskiest decile.
 
-| long only, monthly, April 2019 – June 2024 | $10 floor | $5 floor |
-|---|---|---|
-| universe, equal-weighted | +8.2%/yr, Sharpe 0.34 | +10.3%/yr, Sharpe 0.41 |
-| universe minus decile 10 | +10.5%/yr, Sharpe 0.45 | +11.3%/yr, Sharpe 0.47 |
-| difference | +2.3%/yr, better in 73% of months, worst month −4.8% | +1.0%/yr |
+| long only, monthly, April 2019 – June 2024, $10 floor, screened panel | |
+|---|---|
+| universe, equal-weighted | +9.4%/yr, Sharpe 0.40 |
+| universe minus decile 10 | +11.5%/yr, Sharpe 0.50 |
+| difference | +2.1%/yr, better in 68% of months, worst month −2.1% |
 
 By year the short leg returned −37%, +97%, +8%, −48%, −46%, −20% (2019 to
 mid-2024): it earns steadily and loses everything in a squeeze year. Read
 plainly: the return is real and large gross, it is almost entirely the
 market's known aversion to small, unprofitable, distressed companies rather
-than anything specific to restatements, the alpha left after the factors is
-not distinguishable from zero on 63 months, and whether any of it can be
-collected depends on borrow fees that free data cannot see. Pre-registered
+than anything specific to restatements, the alpha left after the factors
+(+16.7%/yr at t = 1.75 on the screened panel) does not clear the usual bar on
+63 months, and whether any of it can be collected depends on borrow fees that
+free data cannot see. Pre-registered
 forecast: 5–10 points of alpha before costs on the $10 universe — right on
 size, wrong on significance. Caveats: Yahoo drops delisted tickers, so the
 36% of top-decile filings with no price history are the short's best
 outcomes and are missing from the buy-and-hold table (the portfolio charges
 the delisting return only for names that vanish mid-history); SPY is a
 generous benchmark for small caps, which the factor regression corrects.
+
+## Two more signals, same discipline
+
+The backtest engine, the factor regression and the screened price panel were
+turned on two signals the literature treats as informational rather than
+risk-premium, since a risk premium is what the restatement score turned out
+to be. Both were tested the same way: three or two definitions declared in
+advance, the choice made on the early years, the test on 2018 onward, a
+forecast written before the number printed.
+
+**Insider trading (`signals/insider.py`).** Every open-market purchase and
+sale by an officer, director or ten-percent holder from the SEC's Form 3/4/5
+data sets, dated by the Form 4's filing date. Definitions: a cluster of net
+buyers, the top decile of net dollars bought, or officer purchases with no
+officer sale. Chosen on 2012–2017: officers only. Forecast: +2 to +4 points
+of six-factor alpha, t above 2.
+
+| test 2018-01 to 2024-06, stocks above $5 | |
+|---|---|
+| long leg minus the equal-weighted universe | +4.6%/yr raw |
+| six-factor alpha, long leg | −1.0%/yr, t = −0.2 |
+| six-factor alpha, long insider-buys short insider-sells | −1.1%/yr, t = −0.3 |
+
+The raw edge is a small-cap tilt (SMB loading 1.35); nothing survives the
+factors. The other two definitions agree. An earlier run on the unscreened
+panel showed −14.5%/yr alpha at t = −2.8, which was the 240 broken tickers,
+not insiders; it is withdrawn.
+
+**13F clone (`signals/fetch_13f.py`, `signals/clone13f.py`).** Every quarterly
+holdings report from the SEC's Form 13F data sets, 20.5 million positions
+across 9,367 managers, mapped from CUSIP to ticker through the SEC's
+fails-to-deliver files. Cloned with the lag a copier faces: only filings made
+by the 45-day deadline, bought at the end of the following month. Definitions:
+the ten largest positions of the top-decile managers by trailing
+eight-quarter performance, or the fifty most widely held stocks. Chosen on
+2013–2017: the best managers' best ideas. Forecast: +1 to +2 points of alpha.
+
+| test 2018 on, quarterly, stocks above $5 | |
+|---|---|
+| clone minus the equal-weighted universe | +2.9%/yr |
+| clone minus the market | −1.6%/yr |
+| six-factor alpha | −1.5%/yr, t = −0.9; market beta 1.07 |
+
+The best managers' biggest positions are large caps, so the clone beats a
+small-cap universe and trails the market. It is an index fund with extra
+steps.
+
+Scorecard for the three signals tried on this engine: one large gross
+return that is mostly a known risk premium (the restatement score), two
+nulls. That is the ordinary outcome, and the reason the discipline matters
+more than the idea.
 
 ## Little r: the revisions nobody announces
 
@@ -970,6 +1032,8 @@ SCRUTINY_NPZ=data/out/features_scrutiny_v3c.npz FLAGS2_NPZ=data/out/features_fla
 python bertomeu_compare.py
 python asof_test.py               # labels as known at the cutoff; one-year-ahead refits
 python backtest.py; python backtest/portfolio.py --floor 10   # forward returns and the long-short test (Ken French factors in data/raw/factors/)
+python signals/insider.py                       # insider-trading signal, selection 2012-17, test 2018-24
+python signals/fetch_13f.py; python signals/clone13f.py   # 13F clone with the 45-day lag
 python fetch_proxy.py; python fees_features.py parse10k; python fees_features.py parseproxy; python fees_features.py build
 python block_test.py data/out/features_fees.npz --all-rows   # the auditor-fee block
 python forecast_test.py           # next year's and the year after's label; new restatements only

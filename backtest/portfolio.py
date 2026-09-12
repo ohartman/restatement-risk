@@ -55,6 +55,8 @@ def ols(y, X):
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--floor", type=float, default=10.0); ap.add_argument("--delist", type=float, default=-0.30)
     ap.add_argument("--tcost", type=float, default=0.0025, help="one-way transaction cost per dollar traded")
+    ap.add_argument("--screen", default="ticker", choices=["none", "ticker"], help="drop tickers whose Yahoo history is broken")
+    ap.add_argument("--cap", type=float, default=None, help="winsorise monthly returns at this level, e.g. 3.0")
     args = ap.parse_args()
     z = np.load(OUT / "scores_headline_final.npz", allow_pickle=True)
     adsh, filed, score = z["adsh"], pd.to_datetime(z["filed"]), z["s4"]
@@ -63,23 +65,9 @@ def main():
         by_cik.setdefault(str(int(v["cik_str"])), v["ticker"])
     sig = pd.DataFrame({"ticker": [by_cik.get(subs.get(a, ("?",))[0] or "?", "") for a in adsh.tolist()], "filed": filed, "score": score})
     sig = sig[sig.ticker != ""].sort_values("filed")
-    prices = pd.read_parquet(MARKET / "prices.parquet", columns=["date", "ticker", "close", "adj"]); prices["date"] = pd.to_datetime(prices["date"])
-    prices = prices[prices.ticker != "SPY"]
-    last_day = prices.date.max()
-    # month-end panel: last adj/close in each month, plus the ticker's final trading day
-    prices["month"] = prices.date.dt.to_period("M")
-    me = prices.sort_values("date").groupby(["ticker", "month"]).agg(adj=("adj", "last"), close=("close", "last"), last_date=("date", "max")).reset_index()
-    end_of = {t: d for t, d in prices.groupby("ticker").date.max().items()}
-    adj = me.pivot(index="month", columns="ticker", values="adj").sort_index()
-    close = me.pivot(index="month", columns="ticker", values="close").sort_index()
-    ret = adj / adj.shift(1) - 1
-    # delisting: the month in which a ticker's history ends (before the panel's last day) gets the delisting return on top
+    sys.path.insert(0, str(ROOT / "signals")); from panel import month_panel
+    ret, close, _ = month_panel(screen=args.screen, cap=args.cap, delist=args.delist)
     months = ret.index
-    dark = pd.DataFrame(False, index=months, columns=ret.columns)
-    for t, d in end_of.items():
-        if d < last_day - pd.Timedelta(days=7) and t in dark.columns:
-            dark.loc[d.to_period("M"), t] = True
-    ret = ret.where(~dark, (1 + ret) * (1 + args.delist) - 1)
     fac = factors()
 
     rows, held = [], {}
@@ -91,7 +79,7 @@ def main():
             continue
         s = sig[(sig.filed <= asof) & (sig.filed > asof - pd.Timedelta(days=365))].groupby("ticker").score.last()
         px = close.loc[m].reindex(s.index)
-        ok = s.index[(px >= args.floor).fillna(False).values & adj.loc[m].reindex(s.index).notna().values]
+        ok = s.index[(px >= args.floor).fillna(False).values]
         s = s.loc[ok]
         if len(s) < 100:
             continue
@@ -108,7 +96,7 @@ def main():
     df = pd.DataFrame(rows).set_index("month")
     df = df.join(fac[["SMB", "HML", "RMW", "CMA", "MOM"]], how="left")
     df.to_csv(OUT / f"backtest_monthly_floor{int(args.floor)}.csv")
-    print(f"floor ${args.floor:.0f}, delisting return {args.delist:+.0%}, one-way cost {args.tcost:.2%}: {len(df)} months {df.index[0]} to {df.index[-1]}, "
+    print(f"floor ${args.floor:.0f}, screen {args.screen}, cap {args.cap}, delisting return {args.delist:+.0%}, one-way cost {args.tcost:.2%}: {len(df)} months {df.index[0]} to {df.index[-1]}, "
           f"median universe {int(df.n.median()):,} stocks, ~{int(df.n.median() / 10)} per leg\n")
 
     def summarize(name, r):

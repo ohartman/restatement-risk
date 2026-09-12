@@ -40,7 +40,9 @@ def main():
     prices = pd.read_parquet(MARKET / "prices.parquet", columns=["date", "ticker", "adj"])
     prices["date"] = pd.to_datetime(prices["date"])
     spy = prices[prices.ticker == "SPY"].set_index("date")["adj"].sort_index()
-    series = {t: g.set_index("date")["adj"].sort_index() for t, g in prices[prices.ticker != "SPY"].groupby("ticker")}
+    import sys; sys.path.insert(0, "signals"); from panel import month_panel
+    _, _, broken = month_panel(screen="ticker")                                   # the same broken-history screen as the portfolio test
+    series = {t: g.set_index("date")["adj"].sort_index() for t, g in prices[(prices.ticker != "SPY") & ~prices.ticker.isin(broken)].groupby("ticker")}
     print(f"test filings {len(adsh):,}; with a ticker {int((ticker != '').sum()):,}; with prices {sum(1 for t in ticker if t in series):,}\n")
 
     rows = []
