@@ -519,6 +519,15 @@ fifty-fold in 2020 — which is the standard reason shorting microcaps blows up.
 | six-factor alpha (Newey-West) | +9.4%/yr, t = 0.5 | −5.5%/yr, t = −0.3 |
 | factor loadings with t > 2 | SMB −1.5, HML +1.1, RMW +1.9, CMA −1.3 | HML +1.2, RMW +2.0, CMA −1.6 |
 
+The long-only use needs no borrow desk: hold the equal-weighted universe and
+drop the riskiest decile.
+
+| long only, monthly, April 2019 – June 2024 | $10 floor | $5 floor |
+|---|---|---|
+| universe, equal-weighted | +8.2%/yr, Sharpe 0.34 | +10.3%/yr, Sharpe 0.41 |
+| universe minus decile 10 | +10.5%/yr, Sharpe 0.45 | +11.3%/yr, Sharpe 0.47 |
+| difference | +2.3%/yr, better in 73% of months, worst month −4.8% | +1.0%/yr |
+
 By year the short leg returned −37%, +97%, +8%, −48%, −46%, −20% (2019 to
 mid-2024): it earns steadily and loses everything in a squeeze year. Read
 plainly: the return is real and large gross, it is almost entirely the

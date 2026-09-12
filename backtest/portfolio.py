@@ -101,7 +101,8 @@ def main():
         rl, rs = r_next.reindex(list(longs)).fillna(0).mean(), r_next.reindex(list(shorts)).fillna(0).mean()
         r_all = r_next.reindex(s.index).fillna(0).mean()
         turn = (len(longs - prev_long) + len(prev_long - longs)) / max(1, 2 * len(longs)) + (len(shorts - prev_short) + len(prev_short - shorts)) / max(1, 2 * len(shorts))
-        rows.append({"month": nxt, "n": len(s), "long_d1": rl, "short_d10": rs, "universe": r_all, "ls": rl - rs, "turnover": turn,
+        r_ex10 = r_next.reindex(list(set(s.index) - shorts)).fillna(0).mean()
+        rows.append({"month": nxt, "n": len(s), "long_d1": rl, "short_d10": rs, "universe": r_all, "ex10": r_ex10, "ls": rl - rs, "turnover": turn,
                      "mkt": fac.loc[nxt, "Mkt-RF"] if nxt in fac.index else np.nan, "rf": fac.loc[nxt, "RF"] if nxt in fac.index else np.nan})
         prev_long, prev_short = longs, shorts
     df = pd.DataFrame(rows).set_index("month")
@@ -120,6 +121,11 @@ def main():
     print(summarize("  net of transaction costs", df.ls - cost))
     for fee in (0.02, 0.10, 0.30):
         print(summarize(f"  net of costs and {fee:.0%}/yr borrow fee", df.ls - cost - fee / 12))
+    print("\nlong only: the equal-weighted universe with the riskiest decile removed, versus the universe itself")
+    print(summarize("universe, equal-weighted", df.universe))
+    print(summarize("universe minus decile 10", df.ex10))
+    d = df.ex10 - df.universe
+    print(f"{'  difference':<44} {d.mean() * 12:>+7.1%}/yr   months better {(d > 0).mean():.0%}   worst month {d.min():+.1%}   compounded {((1 + df.ex10).prod() / (1 + df.universe).prod() - 1):+.1%} over the period")
     print("\nfactor regression of the gross long-short return on Mkt-RF, SMB, HML, RMW, CMA, MOM (Newey-West t-stats):")
     X = df[["mkt", "SMB", "HML", "RMW", "CMA", "MOM"]].values; y = df.ls.values
     ok = np.isfinite(X).all(axis=1) & np.isfinite(y)
