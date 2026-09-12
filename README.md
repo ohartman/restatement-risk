@@ -489,6 +489,50 @@ the 10-K, so for the 21,793 proxy-sourced rows the fees are not public on
 the day the 10-K is scored. Audit Analytics takes its fees from the same
 proxies, so the published fee results carry the same lag.
 
+## Is it worth money?
+
+The score was built to rank restatement risk. Out of sample it also ranks
+who loses money. `backtest.py` buys each test-period 10-K's stock at the
+close after filing and holds twelve months against SPY; `backtest/portfolio.py`
+runs a monthly long-short portfolio (long the least-likely decile, short the
+most-likely, equal-weighted, rebalanced monthly, each stock's signal its
+latest 10-K score within a year) with a price floor, a delisting return of
+−30% for names whose price history ends, transaction costs, borrow-fee
+scenarios, and a regression on the Fama-French five factors plus momentum
+(Ken French's library, free).
+
+| decile of restatement score, stocks above $10 at entry | later restated | 12-month return vs SPY, mean | median | lost more than half |
+|---|---|---|---|---|
+| 1 | 0.3% | −1.1% | −1.9% | 3% |
+| 5 | 1.2% | −4.4% | −8.4% | 11% |
+| 9 | 8.9% | −18.1% | −35.2% | 38% |
+| **10** | 14.8% | **−28.5%** | **−62.0%** | **59%** |
+
+Decile 10 minus the rest: −22.6% [−31.8%, −12.7%], monotone across the
+deciles. Below $5 the raw mean flips positive — a few penny stocks rose
+fifty-fold in 2020 — which is the standard reason shorting microcaps blows up.
+
+| monthly long-short, April 2019 – June 2024 | $10 floor | $5 floor |
+|---|---|---|
+| gross | +27.6%/yr, Sharpe 0.64, worst month −49% | +13.8%/yr, Sharpe 0.29, worst month −69% |
+| net of 0.25% one-way costs and a 2% / 10% / 30% borrow fee | +24.4% / +16.4% / −3.6% | +10.7% / +2.7% / −17.3% |
+| six-factor alpha (Newey-West) | +9.4%/yr, t = 0.5 | −5.5%/yr, t = −0.3 |
+| factor loadings with t > 2 | SMB −1.5, HML +1.1, RMW +1.9, CMA −1.3 | HML +1.2, RMW +2.0, CMA −1.6 |
+
+By year the short leg returned −37%, +97%, +8%, −48%, −46%, −20% (2019 to
+mid-2024): it earns steadily and loses everything in a squeeze year. Read
+plainly: the return is real and large gross, it is almost entirely the
+market's known aversion to small, unprofitable, distressed companies rather
+than anything specific to restatements, the alpha left after the factors is
+not distinguishable from zero on 63 months, and whether any of it can be
+collected depends on borrow fees that free data cannot see. Pre-registered
+forecast: 5–10 points of alpha before costs on the $10 universe — right on
+size, wrong on significance. Caveats: Yahoo drops delisted tickers, so the
+36% of top-decile filings with no price history are the short's best
+outcomes and are missing from the buy-and-hold table (the portfolio charges
+the delisting return only for names that vanish mid-history); SPY is a
+generous benchmark for small caps, which the factor regression corrects.
+
 ## Little r: the revisions nobody announces
 
 A 10-K states net income for fiscal year *P*. The next year's 10-K states it
@@ -916,6 +960,7 @@ SCRUTINY_NPZ=data/out/features_scrutiny_v3c.npz FLAGS2_NPZ=data/out/features_fla
 # head-to-head with the paid-data model (their oos_2011_2019.csv in data/raw/bertomeu/)
 python bertomeu_compare.py
 python asof_test.py               # labels as known at the cutoff; one-year-ahead refits
+python backtest.py; python backtest/portfolio.py --floor 10   # forward returns and the long-short test (Ken French factors in data/raw/factors/)
 python fetch_proxy.py; python fees_features.py parse10k; python fees_features.py parseproxy; python fees_features.py build
 python block_test.py data/out/features_fees.npz --all-rows   # the auditor-fee block
 python forecast_test.py           # next year's and the year after's label; new restatements only
