@@ -14,7 +14,7 @@ from pathlib import Path
 from multiprocessing import Pool
 import numpy as np
 
-HERE = Path(__file__).resolve().parent
+HERE = Path(os.environ["EC_ROOT"]).resolve() if os.environ.get("EC_ROOT") else Path(__file__).resolve().parent   # EC_ROOT: run against another working tree (the live scorer)
 sys.path.insert(0, str(HERE / "tools" / "edgar-crawler"))
 MDNA = HERE / "data" / "raw" / "mdna"
 SCRATCH = HERE / "data" / "raw" / "ec_scratch"

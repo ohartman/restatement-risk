@@ -489,6 +489,58 @@ the 10-K, so for the 21,793 proxy-sourced rows the fees are not public on
 the day the 10-K is scored. Audit Analytics takes its fees from the same
 proxies, so the published fee results carry the same lag.
 
+## The filings the model has never seen: a forecast you can check
+
+Everything above is a back-test. `live/` turns it into a forecast. The same
+builders run in a separate working tree holding only the 10-Ks filed from
+January 2024 to December 2025 (6,819 filings), with the shared indices,
+insider data, comment-letter release dates and 8-K events fetched through
+2025. `live/score.py` then refits the validated headline forest from the
+main blocks — same rows through 2018, same settings — checks that it
+reproduces 0.748 out of sample before scoring anything, and scores the new
+filings. Three things make it a product rather than a rank:
+
+- **Calibrated probabilities.** Isotonic regression from the forest's score
+  to the observed rate, fitted on its own out-of-sample 2019–2021 scores,
+  where every label has had the full three-year window: mean predicted 4.8%
+  against 4.8% observed, top decile 14.2% against 13.6%.
+- **Reasons per filing.** The five features that moved the score most, by
+  the tree-interpreter decomposition (each split's change in leaf probability
+  credited to its feature, averaged over 3,000 trees), in plain words.
+- **A date stamp.** None of these labels exist yet. The check is the SEC's
+  Item 4.02 filings through 2028; the list is committed as
+  `live/forecast/live_scores_2024_2025.csv` so it cannot be revised quietly.
+
+Of 6,819 filings, 747 (11%) carry a probability of 10% or more and 66 carry
+20% or more; the probabilities sum to 327 expected restatements. The top
+fifteen, as scored:
+
+| rank | company | ticker | filed | P(restate within 3 years) | reasons |
+|---|---|---|---|---|---|
+| 1 | Applied Uv, Inc. | (none) | 2024-04-16 | 54% | + change in cost of goods sold; + mentions of a material weakness; + change in EPS; + says its controls over financial reporting are not effective; + Dechow F-score |
+| 2 | GameSquare Holdings, Inc. | GAME | 2024-04-16 | 54% | + change in cost of goods sold; + change in accounts payable; + mentions of a material weakness; + Dechow F-score; + says its controls over financial reporting are not effective |
+| 3 | Foxx Development Holdings Inc. | FOXX | 2025-10-15 | 54% | + change in cost of goods sold; + mentions of a material weakness; + change in SG&A; + says its controls over financial reporting are not effective; + Dechow F-score |
+| 4 | Bright Mountain Media, Inc. | BMTM | 2024-04-01 | 54% | + mentions of a material weakness; + says its controls over financial reporting are not effective; + Dechow F-score; + restatements in the industry in the prior year; + change in cost of goods sold |
+| 5 | PHOENIX MOTOR INC. | PEVM | 2025-05-30 | 54% | + mentions of a material weakness; + says its controls over financial reporting are not effective; + change in cost of goods sold; + days filed past the deadline; + days from fiscal year-end to filing |
+| 6 | Starco Brands, Inc. | STCB | 2024-04-03 | 52% | + this year's weighted shares; + Dechow F-score; + soft assets share; + revenue growth; + change in cost of goods sold |
+| 7 | Onconetix, Inc. | ONCO | 2025-06-02 | 33% | + mentions of a material weakness; + 8-Ks in the prior year; + sales growth index; + says its controls over financial reporting are not effective; + last year's EPS |
+| 8 | GameSquare Holdings, Inc. | GAME | 2025-04-15 | 27% | + change in cost of goods sold; + mentions of a material weakness; + says its controls over financial reporting are not effective; + Dechow F-score; + change in SG&A |
+| 9 | Alternus Clean Energy, Inc. | ALCE | 2025-06-06 | 26% | + 8-Ks in the prior year; + days filed past the deadline; + replies to the SEC in the prior two years; + days from fiscal year-end to filing; + says its controls over financial reporting are not effective |
+| 10 | Shineco, Inc. | (none) | 2024-09-30 | 25% | + mentions of a material weakness; + Dechow F-score; + says its controls over financial reporting are not effective; + figures tested for Benford; + sales growth index |
+| 11 | Singlepoint Inc. | (none) | 2024-07-19 | 24% | + days filed past the deadline; + last year's acquisitions; + custom XBRL tags; + says its controls over financial reporting are not effective; + change in SG&A |
+| 12 | RTB Digital, Inc. | RTB | 2024-03-26 | 24% | + mentions of a material weakness; + 8-Ks in the prior year; + says its controls over financial reporting are not effective; + disp share frac; + change in cost of goods sold |
+| 13 | Pacific Green Technologies Inc. | (none) | 2025-06-20 | 24% | + days filed past the deadline; + last year's allowance for doubtful accounts; + days from fiscal year-end to filing; + mentions of a material weakness; + says its controls over financial reporting are not effective |
+| 14 | Zoomcar Holdings, Inc. | ZCAR | 2024-07-12 | 24% | + 8-Ks in the prior year; + mentions of a material weakness; + says its controls over financial reporting are not effective; + change in EPS; + days since the last auditor change |
+| 15 | Scilex Holding Co | SCLX | 2024-03-12 | 24% | + 8-Ks in the prior year; + custom XBRL tags; + mentions of a material weakness; + share of custom XBRL tags; + soft assets share |
+
+The probabilities top out at 54%, the highest step of the isotonic fit, and
+the reasons read the way the ledger said they would: a material weakness in
+the filer's own words, controls declared not effective, a late filing, a
+Dechow F-score, and a swing in cost of goods sold or payables. The market
+block is absent for these filings, which costs nothing since it was worth
+nothing. Scripts: `live/fetch_inputs.py`, `live/build_all.sh`,
+`live/score.py`.
+
 ## Is it worth money?
 
 The score was built to rank restatement risk. Out of sample it also ranks
@@ -1031,6 +1083,7 @@ SCRUTINY_NPZ=data/out/features_scrutiny_v3c.npz FLAGS2_NPZ=data/out/features_fla
 # head-to-head with the paid-data model (their oos_2011_2019.csv in data/raw/bertomeu/)
 python bertomeu_compare.py
 python asof_test.py               # labels as known at the cutoff; one-year-ahead refits
+bash live/build_all.sh; python live/score.py   # the 2024-2025 forecast list, in a separate working tree
 python backtest.py; python backtest/portfolio.py --floor 10   # forward returns and the long-short test (Ken French factors in data/raw/factors/)
 python signals/insider.py                       # insider-trading signal, selection 2012-17, test 2018-24
 python signals/fetch_13f.py; python signals/clone13f.py   # 13F clone with the 45-day lag

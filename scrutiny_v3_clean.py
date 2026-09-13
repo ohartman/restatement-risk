@@ -32,7 +32,10 @@ def one(adsh):
 
 def main():
     z = np.load("data/out/features.npz", allow_pickle=True); adsh = z["adsh"]
-    old = np.load("data/out/features_scrutiny_v3.npz", allow_pickle=True)
+    src = Path("data/out/features_scrutiny_v3.npz")
+    if not src.exists():                                    # a fresh panel (the live scorer): history columns come from scrutiny_features.py
+        src = Path("data/out/features_scrutiny.npz")
+    old = np.load(src, allow_pickle=True)
     assert (old["adsh"] == adsh).all()
     X = np.full(old["X"].shape, np.nan); X[:, 10:] = old["X"][:, 10:]
     pos = {a: i for i, a in enumerate(adsh.tolist())}
