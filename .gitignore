@@ -12,3 +12,4 @@ __pycache__/
 run_*.sh
 fix_rows*.sh
 _readme_*.py
+signals/run_link.sh

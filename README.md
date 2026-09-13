@@ -541,6 +541,31 @@ block is absent for these filings, which costs nothing since it was worth
 nothing. Scripts: `live/fetch_inputs.py`, `live/build_all.sh`,
 `live/score.py`.
 
+## Does it predict lawsuits? Partly, and the data to say more is behind a throttle
+
+A restatement is the commonest trigger of a securities class action, which is
+the claim a D&O underwriter pays. Two attempts to measure the link:
+
+**Federal dockets (`signals/fetch_courtlistener.py`, `signals/class_action_link.py`).**
+CourtListener's free search lists every federal docket with nature of suit
+850 (securities, commodities, exchange): 15,054 since 2014, with the
+defendant named after "v.". Anonymous access is throttled hard: three runs at
+three, then ten, seconds a page fetched 7,231 dockets before the API stopped
+answering, leaving 2018–2021 empty — exactly the years a 2019–2023 filing's
+window needs. The matcher is written and the label is not, so no number from
+it is reported. A registered account lifts the throttle (`CL_TOKEN`).
+
+**The filer's own disclosure, as a proxy.** Item 3 of the *next* 10-K says
+whether a class action arrived. Among 11,565 test filings whose current 10-K
+mentions none, 1.9% newly mention one a year later; filings later restated do
+so at 4.1% against 1.8%. The restatement score ranks that outcome at AUC
+0.568 [0.533–0.602] — a real but weak link, and the decile pattern rises to
+the middle and flattens: the riskiest decile is sued no more than the sixth.
+That fits how class actions work: plaintiffs' firms sue companies large
+enough to make damages worth chasing, and the riskiest decile is small. For
+an underwriter the honest sentence is therefore "predicts restatements,
+including in the segment where lawsuits are rare", not "predicts lawsuits".
+
 ## Is it worth money?
 
 The score was built to rank restatement risk. Out of sample it also ranks
@@ -1086,6 +1111,7 @@ python asof_test.py               # labels as known at the cutoff; one-year-ahea
 bash live/build_all.sh; python live/score.py   # the 2024-2025 forecast list, in a separate working tree
 python backtest.py; python backtest/portfolio.py --floor 10   # forward returns and the long-short test (Ken French factors in data/raw/factors/)
 python signals/insider.py                       # insider-trading signal, selection 2012-17, test 2018-24
+python signals/fetch_courtlistener.py 2014 2026; python signals/class_action_link.py   # lawsuit link (needs CL_TOKEN for the full set)
 python signals/fetch_13f.py; python signals/clone13f.py   # 13F clone with the 45-day lag
 python fetch_proxy.py; python fees_features.py parse10k; python fees_features.py parseproxy; python fees_features.py build
 python block_test.py data/out/features_fees.npz --all-rows   # the auditor-fee block
