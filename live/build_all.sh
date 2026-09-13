@@ -2,11 +2,10 @@
 # Build the full feature stack for 10-Ks filed 2024-2025 in the live/ working directory.
 # Every builder resolves data/raw and data/out relative to the working directory, so live/
 # holds only the new quarterly data sets (hard links) plus junctions to the shared inputs.
-PY=/c/Users/owen.hartman/Documents/Scripts/new/.venv/Scripts/python.exe
-MAIN=/c/Users/owen.hartman/Documents/Scripts/restatements
+PY=${PY:-python}
+MAIN=$(cd "$(dirname "$0")/.." && pwd)
 export PYTHONPATH=$MAIN PYTHONIOENCODING=utf-8 EC_ROOT=$MAIN/live
-F="/c/Users/OWEN~1.HAR/AppData/Local/Temp/claude/C--Users-owen-hartman-Documents-Scripts-new/01322158-209e-47db-94af-7cafad43194d/tasks/b3ke2lage.output"
-until grep -q "LIVE FETCH DONE" "$F" 2>/dev/null; do sleep 60; done
+# run live/fetch_all.sh first (it fetches the 2024-2025 raw inputs)
 cd $MAIN/live
 for z in $MAIN/data/raw/2024q?.zip $MAIN/data/raw/2025q?.zip; do
   [ -f "$z" ] && [ ! -f "data/raw/$(basename $z)" ] && cmd //c "mklink /H data\\raw\\$(basename $z) $(cygpath -w $z)" > /dev/null

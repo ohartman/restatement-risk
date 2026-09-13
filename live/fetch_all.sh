@@ -1,6 +1,6 @@
 #!/bin/bash
-PY=/c/Users/owen.hartman/Documents/Scripts/new/.venv/Scripts/python.exe
-cd /c/Users/owen.hartman/Documents/Scripts/restatements
+PY=${PY:-python}
+cd "$(dirname "$0")/.."
 export PYTHONIOENCODING=utf-8
 echo "################ financial data sets 2024-2025 ($(date +%H:%M)) ################"
 $PY -u fetch_sec.py 2024 2025 2>&1 | grep --line-buffered -v Warning
